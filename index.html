@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Brindis de la Victoria - Arkana Games</title>
+  <title>Brindis de la Victoria - Spirita Games</title>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,15 +18,15 @@
       --loading-logo-w: clamp(170px, 45vw, 240px);
 
       /* Slot arch (evita solape con el título) */
-      --arch-overhang: clamp(58px, 10vw, 70px);          /* cuánto “sube” el arco */
-      --arch-height: calc(var(--arch-overhang) + 10px);  /* altura del arco */
+      --arch-overhang: clamp(58px, 10vw, 70px);
+      --arch-height: calc(var(--arch-overhang) + 10px);
 
-      /* Palanca (reserva espacio sin tirar la máquina a la izquierda) */
-      --lever-gap: 6px;                 /* separación entre máquina y palanca */
+      /* Palanca */
+      --lever-gap: 6px;
       --lever-w: 45px;
       --lever-h: 160px;
-      --lever-overhang: calc(var(--lever-w) + var(--lever-gap)); /* right negativo */
-      --lever-space: calc(var(--lever-overhang) + 8px);          /* espacio reservado */
+      --lever-overhang: calc(var(--lever-w) + var(--lever-gap));
+      --lever-space: calc(var(--lever-overhang) + 10px);
 
       /* Spacing */
       --stage-pad-y: 18px;
@@ -34,10 +34,13 @@
       --block-gap: clamp(10px, 1.6vh, 16px);
     }
 
+    /* ✅ SCROLL VERTICAL PERMITIDO */
     html, body {
       width: 100%;
-      height: 100%;
-      overflow: hidden; /* ✅ sin scroll */
+      height: auto;
+      min-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     body{
@@ -46,21 +49,19 @@
       position: relative;
     }
 
-    /* Stage (centra en PC) */
     .stage{
       position: relative;
       width: 100%;
-      height: 100dvh;
-      height: 100svh;
+      min-height: 100svh;
       display: flex;
+      justify-content: flex-start;
       align-items: center;
-      justify-content: center;
+      flex-direction: column;
       padding:
         calc(var(--stage-pad-y) + env(safe-area-inset-top))
         calc(var(--stage-pad-x) + env(safe-area-inset-right))
-        calc(var(--stage-pad-y) + env(safe-area-inset-bottom))
+        calc(var(--stage-pad-y) + 24px + env(safe-area-inset-bottom))
         calc(var(--stage-pad-x) + env(safe-area-inset-left));
-      overflow: hidden;
     }
 
     /* Snowflakes */
@@ -121,7 +122,7 @@
       font-weight: bold;
     }
 
-    /* Container (PC: compacto, sin “cartel” pegado abajo) */
+    /* Container */
     .container{
       width: min(var(--container-max), 100%);
       text-align: center;
@@ -162,7 +163,6 @@
       max-width: 100%;
     }
 
-    /* Title (con z-index alto, y gap real con la máquina) */
     .title{
       position: relative;
       z-index: 6;
@@ -187,28 +187,31 @@
       min-height: 4px;
     }
 
-    /* Slot wrap: reserva espacio palanca SIN tirar la máquina a la izquierda */
     .slot-wrap{
       width: 100%;
       display: flex;
       justify-content: center;
       position: relative;
-
-      /* ✅ evita solape del arco con el título */
       padding-top: calc(var(--arch-overhang) + 16px);
+    }
 
-      /* ✅ reserva espacio para la palanca */
+    /* ✅ FIX: la máquina queda centrada (compensamos el espacio reservado de la palanca) */
+    .slot-frame{
+      width: 100%;
+      max-width: calc(var(--machine-max) + var(--lever-space));
+      margin: 0 auto;
       padding-right: var(--lever-space);
-    }
-    .slot-shift{
-      width: min(var(--machine-max), 100%);
-      transform: translateX(calc(var(--lever-space) / 2)); /* ✅ compensa el padding-right */
-      will-change: transform;
+      position: relative;
+
+      /* Esta compensación evita que la reserva de la palanca empuje la máquina a la izquierda */
+      transform: translateX(clamp(0px, calc(var(--lever-space) / 2), 36px));
+      transform-origin: center;
     }
 
-    /* Slot Machine */
     .slot-machine{
       width: 100%;
+      max-width: var(--machine-max);
+      margin: 0 auto;
       background: linear-gradient(145deg, #8B1538 0%, #6B1028 30%, #8B1538 60%, #4A0E1E 100%);
       border-radius: 30px 30px 15px 15px;
       padding: 0;
@@ -408,7 +411,7 @@
       transform: none;
     }
 
-    /* Palanca (siempre fuera de la máquina, con espacio reservado) */
+    /* Palanca */
     .lever-container{
       position: absolute;
       right: calc(-1 * var(--lever-overhang));
@@ -510,6 +513,7 @@
       backdrop-filter: blur(10px);
       width: 100%;
       max-width: min(520px, 100%);
+      margin-top: 8px;
     }
     .already-played h3{
       color: #FFD700;
@@ -597,11 +601,9 @@
       to{ transform: translateY(110vh) rotate(360deg); opacity: 0; }
     }
 
-    /* ✅ Responsive tweaks */
+    /* Responsive */
     @media (max-width: 768px){
-      :root{
-        --machine-max: 500px;
-      }
+      :root{ --machine-max: 500px; }
       .promo-banner{ padding: 10px 18px; font-size: 0.84rem; }
       .display-panel{ margin: 16px 18px 18px; padding: 14px; font-size: 0.78rem; }
       .reels-container{ margin: 0 18px 20px; padding: 18px 14px; gap: 14px; }
@@ -610,7 +612,6 @@
       .light{ width: 24px; height: 24px; }
     }
 
-    /* ✅ Mobile: el cartel “ya jugaste” queda abajo SOLO EN CELU */
     @media (max-width: 520px){
       :root{
         --lever-w: 38px;
@@ -618,29 +619,10 @@
         --stage-pad-y: 14px;
         --stage-pad-x: 12px;
       }
-
-      .container{
-        /* grid para empujar el “already” abajo sin arruinar PC */
-        min-height: calc(100dvh - 2 * var(--stage-pad-y));
-        display: grid;
-        grid-template-rows: auto auto auto 1fr auto;
-        align-items: start;
-        justify-items: center;
-        row-gap: var(--block-gap);
-      }
-
-      .slot-wrap{ align-self: center; }
-      .already-played{
-        align-self: end;
-        margin-top: 0;
-      }
     }
 
-    /* ✅ Pantallas bajas: compacta para que no “desaparezcan” logo/título */
     @media (max-height: 740px){
-      :root{
-        --block-gap: 10px;
-      }
+      :root{ --block-gap: 10px; }
       .promo-banner{ padding: 10px 18px; }
       .display-panel{ padding: 14px; margin: 16px 18px 18px; }
       .bottom-lights{ padding: 16px 18px; }
@@ -653,14 +635,12 @@
 </head>
 
 <body>
-  <!-- Loading Screen -->
   <div class="loading-screen" id="loadingScreen">
     <img src="assets/image.png" alt="Arkana Games" class="loading-logo" />
     <div class="loading-bar-container"><div class="loading-bar"></div></div>
     <div class="loading-text">Cargando juego...</div>
   </div>
 
-  <!-- Snowflakes -->
   <div id="snowflakes"></div>
 
   <div class="stage">
@@ -674,7 +654,7 @@
       <p class="subtitle"></p>
 
       <div class="slot-wrap">
-        <div class="slot-shift">
+        <div class="slot-frame">
           <div class="slot-machine" id="slotMachine">
             <div class="display-panel">3x Mismo = Gran Premio | 2x Mismo = Premio Especial</div>
 
@@ -691,7 +671,6 @@
               <div class="light"></div><div class="light"></div><div class="light"></div>
             </div>
 
-            <!-- Lever -->
             <div class="lever-container">
               <div class="lever" id="lever">
                 <div class="lever-handle"></div>
@@ -713,7 +692,6 @@
     </div>
   </div>
 
-  <!-- Prize Modal -->
   <div class="modal" id="prizeModal">
     <div class="modal-content">
       <div class="modal-title">🎊 ¡Felicitaciones! 🎊</div>
@@ -723,8 +701,6 @@
     </div>
   </div>
 
-  <!-- Audio (en /assets) -->
-  <!-- Cambiá los nombres si tus archivos se llaman distinto -->
   <audio id="bgMusic" loop preload="auto">
     <source src="assets/background-music.mp3" type="audio/mpeg" />
   </audio>
@@ -738,10 +714,7 @@
   </audio>
 
   <script>
-    /***********************
-     * LocalStorage propio *
-     ***********************/
-    const STORAGE_KEY = "spirita_brindis_victoria_v1"; // ✅ único para este juego
+    const STORAGE_KEY = "spirita_brindis_victoria_v1";
 
     function getLocalDateKey(d = new Date()) {
       const y = d.getFullYear();
@@ -754,20 +727,13 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         return raw ? JSON.parse(raw) : null;
-      } catch {
-        return null;
-      }
+      } catch { return null; }
     }
 
     function saveState(state) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } catch {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
     }
 
-    /********
-     * Data *
-     ********/
     const symbols = ["🥂", "🍾", "🏆", "⭐", "🎉"];
     const prizes = [
       { combo: "🥂🥂🥂", name: "Bono 200% - Brindis Perfecto", emoji: "🥂", weight: 5 },
@@ -778,11 +744,7 @@
       { combo: "default", name: "Bono Sorpresa", emoji: "🎁", weight: 50 },
     ];
 
-    /***********
-     * Elements *
-     ***********/
     const loadingScreen = document.getElementById("loadingScreen");
-
     const spinButton = document.getElementById("spinButton");
     const reel1 = document.getElementById("reel1");
     const reel2 = document.getElementById("reel2");
@@ -796,37 +758,26 @@
     const alreadyPlayed = document.getElementById("alreadyPlayed");
     const todayPrize = document.getElementById("todayPrize");
     const countdown = document.getElementById("countdown");
-
     const lever = document.getElementById("lever");
 
-    // Audio
     const bgMusic = document.getElementById("bgMusic");
     const startSound = document.getElementById("startSound");
     const prizeSound = document.getElementById("prizeSound");
 
-    /********
-     * State *
-     ********/
     let isSpinning = false;
     let hasPlayedToday = false;
     let audioUnlocked = false;
     let countdownTimer = null;
 
-    /****************
-     * Audio unlock  *
-     * (bg inicia al tocar la página)
-     ****************/
     function unlockAudio() {
       if (audioUnlocked) return;
       audioUnlocked = true;
-
       try {
         bgMusic.volume = 0.25;
         bgMusic.play().catch(() => {});
       } catch {}
     }
 
-    // Primer toque/click inicia música de fondo
     window.addEventListener("pointerdown", unlockAudio, { once: true });
     window.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
 
@@ -835,9 +786,6 @@
       bgMusic.volume = on ? 0.12 : 0.25;
     }
 
-    /***************
-     * Snowflakes   *
-     ***************/
     function createSnowflakes() {
       const container = document.getElementById("snowflakes");
       if (!container) return;
@@ -856,9 +804,6 @@
       }
     }
 
-    /**********************
-     * Check played today *
-     **********************/
     function checkIfPlayedToday() {
       const today = getLocalDateKey();
       const state = loadState();
@@ -893,23 +838,17 @@
       countdown.textContent = `⏰ Próximo juego en: ${hours}h ${minutes}m ${seconds}s`;
     }
 
-    /****************
-     * Prize logic   *
-     ****************/
     function getWeightedPrize(result) {
       const combo = result.join("");
 
-      // exact match
       for (const p of prizes) {
         if (p.combo === combo) return p;
       }
 
-      // premium mix
       const premiumSymbols = ["🏆", "⭐", "🎉"];
       const isPremium = result.every(s => premiumSymbols.includes(s));
       if (isPremium) return prizes.find(p => p.combo === "premium");
 
-      // weighted default
       const total = prizes.reduce((sum, p) => sum + p.weight, 0);
       let r = Math.random() * total;
 
@@ -921,9 +860,6 @@
       return prizes[prizes.length - 1];
     }
 
-    /***************
-     * Spin control *
-     ***************/
     function setReelSymbol(reelEl, sym) {
       const span = reelEl.querySelector(".reel-symbol");
       if (span) span.textContent = sym;
@@ -932,12 +868,11 @@
     async function spin() {
       if (hasPlayedToday || isSpinning) return;
 
-      unlockAudio(); // por si tocaron directo el botón
+      unlockAudio();
       isSpinning = true;
       spinButton.disabled = true;
       duckBg(true);
 
-      // sonido inicio máquina
       try {
         startSound.currentTime = 0;
         startSound.volume = 0.75;
@@ -985,9 +920,6 @@
       });
     }
 
-    /************
-     * Prize UI  *
-     ************/
     function showPrize(prize) {
       setTimeout(() => {
         duckBg(true);
@@ -1035,14 +967,10 @@
       if (e.target === prizeModal) closeModal.click();
     });
 
-    /***********
-     * Init     *
-     ***********/
     setTimeout(() => {
       loadingScreen.classList.add("hidden");
       createSnowflakes();
       checkIfPlayedToday();
-      // Música: SOLO arranca cuando el usuario toca la pantalla (unlockAudio)
     }, 2000);
   </script>
 </body>
