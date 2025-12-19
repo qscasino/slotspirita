@@ -1,1 +1,1049 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brindis de la Victoria - Arkana Games</title>
 
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root{
+      /* Layout */
+      --container-max: 560px;
+      --machine-max: 480px;
+
+      /* Logo sizes */
+      --logo-w: clamp(110px, 22vw, 150px);
+      --loading-logo-w: clamp(170px, 45vw, 240px);
+
+      /* Slot arch (evita solape con el título) */
+      --arch-overhang: clamp(58px, 10vw, 70px);          /* cuánto “sube” el arco */
+      --arch-height: calc(var(--arch-overhang) + 10px);  /* altura del arco */
+
+      /* Palanca (reserva espacio sin tirar la máquina a la izquierda) */
+      --lever-gap: 6px;                 /* separación entre máquina y palanca */
+      --lever-w: 45px;
+      --lever-h: 160px;
+      --lever-overhang: calc(var(--lever-w) + var(--lever-gap)); /* right negativo */
+      --lever-space: calc(var(--lever-overhang) + 8px);          /* espacio reservado */
+
+      /* Spacing */
+      --stage-pad-y: 18px;
+      --stage-pad-x: 14px;
+      --block-gap: clamp(10px, 1.6vh, 16px);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* ✅ sin scroll */
+    }
+
+    body{
+      font-family: 'Georgia', serif;
+      background: linear-gradient(135deg, #8B1538 0%, #4A0E1E 100%);
+      position: relative;
+    }
+
+    /* Stage (centra en PC) */
+    .stage{
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      height: 100svh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding:
+        calc(var(--stage-pad-y) + env(safe-area-inset-top))
+        calc(var(--stage-pad-x) + env(safe-area-inset-right))
+        calc(var(--stage-pad-y) + env(safe-area-inset-bottom))
+        calc(var(--stage-pad-x) + env(safe-area-inset-left));
+      overflow: hidden;
+    }
+
+    /* Snowflakes */
+    .snowflake{
+      position: fixed;
+      top: -10px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1em;
+      animation: fall linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes fall { to { transform: translateY(110vh); } }
+
+    /* Loading Screen */
+    .loading-screen{
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #8B1538 0%, #4A0E1E 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    .loading-screen.hidden{ opacity: 0; pointer-events: none; }
+
+    .loading-logo{
+      width: var(--loading-logo-w);
+      max-width: 260px;
+      height: auto;
+      margin-bottom: 24px;
+      animation: pulse 2s ease-in-out infinite;
+      filter: drop-shadow(0 10px 30px rgba(0,0,0,0.35));
+    }
+    @keyframes pulse { 0%,100%{ transform: scale(1); } 50%{ transform: scale(1.05); } }
+
+    .loading-bar-container{
+      width: min(320px, 78vw);
+      height: 8px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .loading-bar{
+      height: 100%;
+      background: linear-gradient(90deg, #FFD700, #FFA500);
+      border-radius: 10px;
+      animation: loading 2s ease-in-out forwards;
+    }
+    @keyframes loading { from{ width:0%; } to{ width:100%; } }
+
+    .loading-text{
+      margin-top: 14px;
+      color: #FFD700;
+      font-size: 1.05rem;
+      font-weight: bold;
+    }
+
+    /* Container (PC: compacto, sin “cartel” pegado abajo) */
+    .container{
+      width: min(var(--container-max), 100%);
+      text-align: center;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--block-gap);
+    }
+
+    /* Header */
+    .header{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 5;
+    }
+
+    .logo{
+      width: var(--logo-w);
+      height: auto;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35));
+    }
+
+    .promo-banner{
+      background: linear-gradient(135deg, #2D7A3E, #1F5229);
+      color: #FFD700;
+      padding: 12px 28px;
+      border-radius: 25px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      border: 2px solid #FFD700;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    /* Title (con z-index alto, y gap real con la máquina) */
+    .title{
+      position: relative;
+      z-index: 6;
+      font-size: clamp(1.7rem, 3.2vw, 2.35rem);
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow:
+        0 0 10px rgba(255,215,0,0.8),
+        0 0 20px rgba(255,215,0,0.6),
+        2px 2px 4px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 8px;
+    }
+
+    .subtitle{
+      color: rgba(255,255,255,0.9);
+      font-size: 1rem;
+      line-height: 1.4;
+      min-height: 4px;
+    }
+
+    /* Slot wrap: reserva espacio palanca SIN tirar la máquina a la izquierda */
+    .slot-wrap{
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      position: relative;
+
+      /* ✅ evita solape del arco con el título */
+      padding-top: calc(var(--arch-overhang) + 16px);
+
+      /* ✅ reserva espacio para la palanca */
+      padding-right: var(--lever-space);
+    }
+    .slot-shift{
+      width: min(var(--machine-max), 100%);
+      transform: translateX(calc(var(--lever-space) / 2)); /* ✅ compensa el padding-right */
+      will-change: transform;
+    }
+
+    /* Slot Machine */
+    .slot-machine{
+      width: 100%;
+      background: linear-gradient(145deg, #8B1538 0%, #6B1028 30%, #8B1538 60%, #4A0E1E 100%);
+      border-radius: 30px 30px 15px 15px;
+      padding: 0;
+      box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.9),
+        0 15px 35px rgba(0, 0, 0, 0.7),
+        inset 0 2px 20px rgba(255, 215, 0, 0.1),
+        inset 0 -5px 30px rgba(0, 0, 0, 0.8);
+      position: relative;
+      overflow: visible;
+      border: 4px solid #2d1515;
+    }
+
+    /* Arco superior */
+    .slot-machine::before{
+      content: '';
+      position: absolute;
+      top: calc(-1 * var(--arch-overhang));
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      height: var(--arch-height);
+      background: linear-gradient(180deg,
+        #8B1538 0%,
+        #7B1230 15%,
+        #6B1028 30%,
+        #7B1230 50%,
+        #8B1538 70%,
+        #6B1028 85%,
+        #4A0E1E 100%
+      );
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      border: 5px solid #2d1515;
+      border-bottom: none;
+      box-shadow:
+        0 -15px 40px rgba(0, 0, 0, 0.9),
+        inset 0 5px 20px rgba(255, 215, 0, 0.15),
+        inset 0 -8px 25px rgba(0, 0, 0, 0.8);
+      z-index: 2;
+    }
+
+    /* Luces superiores */
+    .slot-machine::after{
+      content: '';
+      position: absolute;
+      top: calc(-1 * (var(--arch-overhang) - 25px));
+      left: 50%;
+      transform: translateX(-50%);
+      width: 75%;
+      height: 35px;
+      background:
+        radial-gradient(circle at 10% 50%, #FFD700 0%, #FFA500 20%, #DAA520 35%, transparent 45%),
+        radial-gradient(circle at 30% 50%, #FFD700 0%, #FFA500 20%, #DAA520 35%, transparent 45%),
+        radial-gradient(circle at 50% 50%, #FFD700 0%, #FFA500 20%, #DAA520 35%, transparent 45%),
+        radial-gradient(circle at 70% 50%, #FFD700 0%, #FFA500 20%, #DAA520 35%, transparent 45%),
+        radial-gradient(circle at 90% 50%, #FFD700 0%, #FFA500 20%, #DAA520 35%, transparent 45%);
+      background-size: 20% 100%;
+      background-repeat: no-repeat;
+      animation: topLights 1.5s infinite;
+      pointer-events: none;
+      z-index: 3;
+      filter: drop-shadow(0 0 8px rgba(255,215,0,0.8));
+      opacity: 0.9;
+    }
+    @keyframes topLights{
+      0%,100%{ opacity: 0.95; }
+      50%{ opacity: 0.45; }
+    }
+
+    .display-panel{
+      background: linear-gradient(135deg, #0f2535 0%, #1a3a4a 20%, #0a1a2a 50%, #1a3a4a 80%, #0f2535 100%);
+      padding: 18px;
+      margin: 20px 25px 25px;
+      border-radius: 15px;
+      border: 4px solid #1a2a3a;
+      box-shadow:
+        inset 0 6px 20px rgba(0, 0, 0, 0.9),
+        0 3px 10px rgba(255, 215, 0, 0.2);
+      color: #5ab4d4;
+      font-size: 0.8rem;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+      position: relative;
+      text-shadow: 0 0 5px rgba(74, 154, 186, 0.6);
+    }
+    .display-panel::before{
+      content: '💰 PREMIOS 💰';
+      display: block;
+      color: #FFD700;
+      font-weight: bold;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 12px rgba(255, 215, 0, 0.9);
+      letter-spacing: 2px;
+    }
+
+    .reels-container{
+      background: linear-gradient(135deg, #000000 0%, #0a0a0a 15%, #1a1a1a 35%, #0f0f0f 50%, #1a1a1a 65%, #0a0a0a 85%, #000000 100%);
+      border: 6px solid #1a1515;
+      border-radius: 18px;
+      padding: 25px 20px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 0 25px 30px;
+      box-shadow:
+        inset 0 12px 35px rgba(0, 0, 0, 0.98),
+        0 3px 12px rgba(255, 215, 0, 0.35),
+        0 8px 25px rgba(0, 0, 0, 0.7);
+      position: relative;
+    }
+
+    .reels-container::before,
+    .reels-container::after{
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #5ab4d4;
+      font-size: 1.6rem;
+      text-shadow: 0 0 12px rgba(74, 154, 186, 0.9);
+      opacity: 0.7;
+      animation: arrowPulse 2s infinite;
+      pointer-events: none;
+    }
+    .reels-container::before{ content:'◀'; left: 8px; }
+    .reels-container::after{ content:'▶'; right: 8px; }
+
+    @keyframes arrowPulse{
+      0%,100%{ opacity: 0.75; }
+      50%{ opacity: 0.35; }
+    }
+
+    .reel{
+      width: 95px;
+      height: 130px;
+      background: linear-gradient(180deg, #ffffff 0%, #fafafa 5%, #f0f0f0 15%, #e8e8e8 50%, #f5f5f5 85%, #ffffff 95%, #fafafa 100%);
+      border: 4px solid #1a1a1a;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.8),
+        inset 0 3px 12px rgba(255, 255, 255, 0.95);
+    }
+    .reel::before{
+      content:'';
+      position:absolute; top:0; left:0; right:0;
+      height: 40%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+      pointer-events:none;
+      border-radius: 10px 10px 0 0;
+    }
+    .reel::after{
+      content:'';
+      position:absolute; bottom:0; left:0; right:0;
+      height: 35%;
+      background: linear-gradient(0deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.08) 50%, transparent 100%);
+      pointer-events:none;
+    }
+
+    .reel.spinning{ animation: spin 0.1s linear infinite; }
+    @keyframes spin { 0%{ transform: translateY(0); } 100%{ transform: translateY(-100%); } }
+
+    .reel-symbol{
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    .spin-button{
+      background: linear-gradient(145deg, #6B5010 0%, #8B6914 5%, #B8860B 15%, #DAA520 30%, #FFD700 50%, #DAA520 70%, #B8860B 85%, #8B6914 95%, #6B5010 100%);
+      color: #2d1515;
+      padding: 20px 55px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.15rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.7),
+        0 0 0 4px #6B5010,
+        0 0 0 7px #1a1515;
+      margin: 0 25px 25px;
+      letter-spacing: 1.2px;
+    }
+    .spin-button:hover{ transform: translateY(-2px); }
+    .spin-button:active{ transform: translateY(1px); }
+    .spin-button:disabled{
+      background: linear-gradient(145deg, #4a4a4a 0%, #6a6a6a 50%, #4a4a4a 100%);
+      color: #9a9a9a;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Palanca (siempre fuera de la máquina, con espacio reservado) */
+    .lever-container{
+      position: absolute;
+      right: calc(-1 * var(--lever-overhang));
+      top: 50%;
+      transform: translateY(-50%);
+      width: var(--lever-w);
+      height: var(--lever-h);
+      z-index: 6;
+      pointer-events: auto;
+    }
+
+    .lever{
+      position: relative;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .lever-handle{
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(var(--lever-w) - 10px);
+      height: calc(var(--lever-w) - 10px);
+      background: radial-gradient(circle at 35% 35%, #FFD700 0%, #FFA500 30%, #DAA520 50%, #B8860B 70%, #8B6914 100%);
+      border-radius: 50%;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.7);
+      border: 3px solid #6B5010;
+    }
+
+    .lever-arm{
+      position: absolute;
+      top: calc(var(--lever-w) - 15px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 10px;
+      height: calc(var(--lever-h) - (var(--lever-w) - 15px));
+      background: linear-gradient(90deg, #3a3a3a 0%, #8a8a8a 50%, #3a3a3a 100%);
+      border-radius: 5px;
+      box-shadow: 3px 0 10px rgba(0,0,0,0.6);
+    }
+
+    .lever.pulled{ animation: leverPull 0.5s ease; }
+    @keyframes leverPull{
+      0%{ transform: translateY(0) rotate(0deg); }
+      50%{ transform: translateY(40px) rotate(5deg); }
+      100%{ transform: translateY(0) rotate(0deg); }
+    }
+
+    .bottom-lights{
+      display: flex;
+      justify-content: space-around;
+      padding: 20px 25px;
+      gap: 10px;
+    }
+
+    .light{
+      width: 28px;
+      height: 28px;
+      background: radial-gradient(circle at 35% 35%, #FFD700 0%, #FFA500 25%, #DAA520 50%, #B8860B 75%, #8B6914 100%);
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(255,215,0,0.7);
+      animation: lightPulse 2s infinite;
+      border: 3px solid #6B5010;
+    }
+    @keyframes lightPulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.55; } }
+
+    .machine-base{
+      position: absolute;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 115%;
+      height: 70px;
+      background: radial-gradient(ellipse at center,
+        rgba(139, 21, 56, 0.8) 0%,
+        rgba(139, 21, 56, 0.5) 30%,
+        rgba(255, 215, 0, 0.2) 50%,
+        transparent 75%
+      );
+      border-radius: 50%;
+      filter: blur(20px);
+      z-index: -1;
+      animation: baseGlow 3s infinite;
+    }
+    @keyframes baseGlow{
+      0%,100%{ opacity:0.7; transform: translateX(-50%) scale(1); filter: blur(20px); }
+      50%{ opacity:0.9; transform: translateX(-50%) scale(1.08); filter: blur(25px); }
+    }
+
+    /* Already played */
+    .already-played{
+      background: rgba(139, 21, 56, 0.8);
+      border: 3px solid #FFD700;
+      border-radius: 15px;
+      padding: 22px 18px;
+      backdrop-filter: blur(10px);
+      width: 100%;
+      max-width: min(520px, 100%);
+    }
+    .already-played h3{
+      color: #FFD700;
+      font-size: 1.45rem;
+      margin-bottom: 10px;
+    }
+    .already-played p{
+      color: #fff;
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+    .countdown{
+      color: #FFD700;
+      font-size: 1.15rem;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    /* Modal */
+    .modal{
+      display:none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal.show{ display:flex; }
+
+    .modal-content{
+      background: linear-gradient(135deg, #8B1538, #4A0E1E);
+      border: 4px solid #FFD700;
+      border-radius: 20px;
+      padding: 36px 26px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+      animation: modalSlideIn 0.5s ease-out;
+    }
+    @keyframes modalSlideIn{
+      from{ opacity:0; transform: translateY(-40px) scale(0.95); }
+      to{ opacity:1; transform: translateY(0) scale(1); }
+    }
+    .modal-title{
+      font-size: 1.7rem;
+      color: #FFD700;
+      margin-bottom: 16px;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    }
+    .modal-prize{ font-size: 2.5rem; margin: 16px 0; }
+    .modal-text{
+      color: #fff;
+      font-size: 1.15rem;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+    .modal-button{
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: #8B1538;
+      border: none;
+      padding: 12px 40px;
+      font-size: 1.05rem;
+      font-weight: bold;
+      border-radius: 25px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255,215,0,0.4);
+      transition: transform 0.2s ease;
+    }
+    .modal-button:hover{ transform: translateY(-2px); }
+
+    /* Confetti */
+    .confetti{
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: #FFD700;
+      animation: confettiFall 3s linear;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    @keyframes confettiFall{
+      to{ transform: translateY(110vh) rotate(360deg); opacity: 0; }
+    }
+
+    /* ✅ Responsive tweaks */
+    @media (max-width: 768px){
+      :root{
+        --machine-max: 500px;
+      }
+      .promo-banner{ padding: 10px 18px; font-size: 0.84rem; }
+      .display-panel{ margin: 16px 18px 18px; padding: 14px; font-size: 0.78rem; }
+      .reels-container{ margin: 0 18px 20px; padding: 18px 14px; gap: 14px; }
+      .spin-button{ margin: 0 18px 18px; padding: 14px 30px; font-size: 1rem; }
+      .reel{ width: 80px; height: 110px; font-size: 3.2rem; }
+      .light{ width: 24px; height: 24px; }
+    }
+
+    /* ✅ Mobile: el cartel “ya jugaste” queda abajo SOLO EN CELU */
+    @media (max-width: 520px){
+      :root{
+        --lever-w: 38px;
+        --lever-h: 140px;
+        --stage-pad-y: 14px;
+        --stage-pad-x: 12px;
+      }
+
+      .container{
+        /* grid para empujar el “already” abajo sin arruinar PC */
+        min-height: calc(100dvh - 2 * var(--stage-pad-y));
+        display: grid;
+        grid-template-rows: auto auto auto 1fr auto;
+        align-items: start;
+        justify-items: center;
+        row-gap: var(--block-gap);
+      }
+
+      .slot-wrap{ align-self: center; }
+      .already-played{
+        align-self: end;
+        margin-top: 0;
+      }
+    }
+
+    /* ✅ Pantallas bajas: compacta para que no “desaparezcan” logo/título */
+    @media (max-height: 740px){
+      :root{
+        --block-gap: 10px;
+      }
+      .promo-banner{ padding: 10px 18px; }
+      .display-panel{ padding: 14px; margin: 16px 18px 18px; }
+      .bottom-lights{ padding: 16px 18px; }
+      .already-played{ padding: 18px 14px; }
+      .already-played h3{ font-size: 1.25rem; }
+      .already-played p{ font-size: 0.98rem; }
+      .countdown{ font-size: 1.05rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <img src="assets/image.png" alt="Arkana Games" class="loading-logo" />
+    <div class="loading-bar-container"><div class="loading-bar"></div></div>
+    <div class="loading-text">Cargando juego...</div>
+  </div>
+
+  <!-- Snowflakes -->
+  <div id="snowflakes"></div>
+
+  <div class="stage">
+    <div class="container" id="gameContainer">
+      <div class="header">
+        <img src="assets/image.png" alt="Arkana Games" class="logo" />
+        <div class="promo-banner">🎄 PROMOCIÓN ESPECIAL DE NAVIDAD 🎄</div>
+      </div>
+
+      <h1 class="title">🥂 BRINDIS DE LA VICTORIA 🥂</h1>
+      <p class="subtitle"></p>
+
+      <div class="slot-wrap">
+        <div class="slot-shift">
+          <div class="slot-machine" id="slotMachine">
+            <div class="display-panel">3x Mismo = Gran Premio | 2x Mismo = Premio Especial</div>
+
+            <div class="reels-container">
+              <div class="reel" id="reel1"><span class="reel-symbol">🥂</span></div>
+              <div class="reel" id="reel2"><span class="reel-symbol">🍾</span></div>
+              <div class="reel" id="reel3"><span class="reel-symbol">🏆</span></div>
+            </div>
+
+            <button class="spin-button" id="spinButton">🎰 GIRAR Y BRINDAR</button>
+
+            <div class="bottom-lights">
+              <div class="light"></div><div class="light"></div><div class="light"></div>
+              <div class="light"></div><div class="light"></div><div class="light"></div>
+            </div>
+
+            <!-- Lever -->
+            <div class="lever-container">
+              <div class="lever" id="lever">
+                <div class="lever-handle"></div>
+                <div class="lever-arm"></div>
+              </div>
+            </div>
+
+            <div class="machine-base"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="already-played" id="alreadyPlayed" style="display:none;">
+        <h3>🎊 Ya jugaste hoy</h3>
+        <p>Tu premio: <strong id="todayPrize"></strong></p>
+        <p>Vuelve mañana para una nueva oportunidad.</p>
+        <div class="countdown" id="countdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prize Modal -->
+  <div class="modal" id="prizeModal">
+    <div class="modal-content">
+      <div class="modal-title">🎊 ¡Felicitaciones! 🎊</div>
+      <div class="modal-prize" id="modalPrize"></div>
+      <div class="modal-text" id="modalText"></div>
+      <button class="modal-button" id="closeModal">CERRAR</button>
+    </div>
+  </div>
+
+  <!-- Audio (en /assets) -->
+  <!-- Cambiá los nombres si tus archivos se llaman distinto -->
+  <audio id="bgMusic" loop preload="auto">
+    <source src="assets/background-music.mp3" type="audio/mpeg" />
+  </audio>
+
+  <audio id="startSound" preload="auto">
+    <source src="assets/machine-start.mp3" type="audio/mpeg" />
+  </audio>
+
+  <audio id="prizeSound" preload="auto">
+    <source src="assets/prize-sound.mp3" type="audio/mpeg" />
+  </audio>
+
+  <script>
+    /***********************
+     * LocalStorage propio *
+     ***********************/
+    const STORAGE_KEY = "spirita_brindis_victoria_v1"; // ✅ único para este juego
+
+    function getLocalDateKey(d = new Date()) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveState(state) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {}
+    }
+
+    /********
+     * Data *
+     ********/
+    const symbols = ["🥂", "🍾", "🏆", "⭐", "🎉"];
+    const prizes = [
+      { combo: "🥂🥂🥂", name: "Bono 200% - Brindis Perfecto", emoji: "🥂", weight: 5 },
+      { combo: "🍾🍾🍾", name: "Bono 200% - Botella Dorada", emoji: "🍾", weight: 8 },
+      { combo: "🏆🏆🏆", name: "Bono 200% - Triple Victoria", emoji: "🏆", weight: 10 },
+      { combo: "⭐⭐⭐", name: "Bono 200% - Estrellas Doradas", emoji: "⭐", weight: 7 },
+      { combo: "premium", name: "Bono 100% - Brindis Ganador", emoji: "🎉", weight: 20 },
+      { combo: "default", name: "Bono Sorpresa", emoji: "🎁", weight: 50 },
+    ];
+
+    /***********
+     * Elements *
+     ***********/
+    const loadingScreen = document.getElementById("loadingScreen");
+
+    const spinButton = document.getElementById("spinButton");
+    const reel1 = document.getElementById("reel1");
+    const reel2 = document.getElementById("reel2");
+    const reel3 = document.getElementById("reel3");
+
+    const prizeModal = document.getElementById("prizeModal");
+    const closeModal = document.getElementById("closeModal");
+    const modalPrize = document.getElementById("modalPrize");
+    const modalText = document.getElementById("modalText");
+
+    const alreadyPlayed = document.getElementById("alreadyPlayed");
+    const todayPrize = document.getElementById("todayPrize");
+    const countdown = document.getElementById("countdown");
+
+    const lever = document.getElementById("lever");
+
+    // Audio
+    const bgMusic = document.getElementById("bgMusic");
+    const startSound = document.getElementById("startSound");
+    const prizeSound = document.getElementById("prizeSound");
+
+    /********
+     * State *
+     ********/
+    let isSpinning = false;
+    let hasPlayedToday = false;
+    let audioUnlocked = false;
+    let countdownTimer = null;
+
+    /****************
+     * Audio unlock  *
+     * (bg inicia al tocar la página)
+     ****************/
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+
+      try {
+        bgMusic.volume = 0.25;
+        bgMusic.play().catch(() => {});
+      } catch {}
+    }
+
+    // Primer toque/click inicia música de fondo
+    window.addEventListener("pointerdown", unlockAudio, { once: true });
+    window.addEventListener("touchstart", unlockAudio, { once: true, passive: true });
+
+    function duckBg(on) {
+      if (!audioUnlocked) return;
+      bgMusic.volume = on ? 0.12 : 0.25;
+    }
+
+    /***************
+     * Snowflakes   *
+     ***************/
+    function createSnowflakes() {
+      const container = document.getElementById("snowflakes");
+      if (!container) return;
+
+      container.innerHTML = "";
+      for (let i = 0; i < 45; i++) {
+        const s = document.createElement("div");
+        s.className = "snowflake";
+        s.textContent = "❄";
+        s.style.left = Math.random() * 100 + "%";
+        s.style.animationDuration = (Math.random() * 3 + 6) + "s";
+        s.style.animationDelay = (Math.random() * 5) + "s";
+        s.style.opacity = (Math.random() * 0.6 + 0.25).toFixed(2);
+        s.style.fontSize = (Math.random() * 10 + 10) + "px";
+        container.appendChild(s);
+      }
+    }
+
+    /**********************
+     * Check played today *
+     **********************/
+    function checkIfPlayedToday() {
+      const today = getLocalDateKey();
+      const state = loadState();
+
+      if (state && state.lastPlay === today && state.prizeName) {
+        hasPlayedToday = true;
+        showAlreadyPlayed(state.prizeName);
+      }
+    }
+
+    function showAlreadyPlayed(prizeName) {
+      spinButton.disabled = true;
+      alreadyPlayed.style.display = "block";
+      todayPrize.textContent = prizeName;
+
+      updateCountdown();
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = setInterval(updateCountdown, 1000);
+    }
+
+    function updateCountdown() {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      const diff = tomorrow - now;
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      countdown.textContent = `⏰ Próximo juego en: ${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    /****************
+     * Prize logic   *
+     ****************/
+    function getWeightedPrize(result) {
+      const combo = result.join("");
+
+      // exact match
+      for (const p of prizes) {
+        if (p.combo === combo) return p;
+      }
+
+      // premium mix
+      const premiumSymbols = ["🏆", "⭐", "🎉"];
+      const isPremium = result.every(s => premiumSymbols.includes(s));
+      if (isPremium) return prizes.find(p => p.combo === "premium");
+
+      // weighted default
+      const total = prizes.reduce((sum, p) => sum + p.weight, 0);
+      let r = Math.random() * total;
+
+      for (const p of prizes) {
+        r -= p.weight;
+        if (r <= 0) return p;
+      }
+
+      return prizes[prizes.length - 1];
+    }
+
+    /***************
+     * Spin control *
+     ***************/
+    function setReelSymbol(reelEl, sym) {
+      const span = reelEl.querySelector(".reel-symbol");
+      if (span) span.textContent = sym;
+    }
+
+    async function spin() {
+      if (hasPlayedToday || isSpinning) return;
+
+      unlockAudio(); // por si tocaron directo el botón
+      isSpinning = true;
+      spinButton.disabled = true;
+      duckBg(true);
+
+      // sonido inicio máquina
+      try {
+        startSound.currentTime = 0;
+        startSound.volume = 0.75;
+        startSound.play().catch(() => {});
+      } catch {}
+
+      reel1.classList.add("spinning");
+      reel2.classList.add("spinning");
+      reel3.classList.add("spinning");
+
+      const spinInterval = setInterval(() => {
+        setReelSymbol(reel1, symbols[Math.floor(Math.random() * symbols.length)]);
+        setReelSymbol(reel2, symbols[Math.floor(Math.random() * symbols.length)]);
+        setReelSymbol(reel3, symbols[Math.floor(Math.random() * symbols.length)]);
+      }, 60);
+
+      setTimeout(() => reel1.classList.remove("spinning"), 1000);
+      setTimeout(() => reel2.classList.remove("spinning"), 1500);
+
+      setTimeout(() => {
+        reel3.classList.remove("spinning");
+        clearInterval(spinInterval);
+
+        const result = [
+          reel1.querySelector(".reel-symbol")?.textContent || "🥂",
+          reel2.querySelector(".reel-symbol")?.textContent || "🍾",
+          reel3.querySelector(".reel-symbol")?.textContent || "🏆"
+        ];
+
+        const prize = getWeightedPrize(result);
+        showPrize(prize);
+
+        isSpinning = false;
+      }, 2000);
+    }
+
+    spinButton.addEventListener("click", spin);
+
+    if (lever) {
+      lever.addEventListener("click", () => {
+        if (spinButton.disabled) return;
+        lever.classList.add("pulled");
+        setTimeout(() => lever.classList.remove("pulled"), 500);
+        spin();
+      });
+    }
+
+    /************
+     * Prize UI  *
+     ************/
+    function showPrize(prize) {
+      setTimeout(() => {
+        duckBg(true);
+
+        try {
+          prizeSound.currentTime = 0;
+          prizeSound.volume = 0.7;
+          prizeSound.play().catch(() => {});
+        } catch {}
+
+        createConfetti();
+
+        modalPrize.textContent = prize.emoji;
+        modalText.innerHTML = `<strong>${prize.name}</strong><br>¡Felicidades por tu premio!`;
+        prizeModal.classList.add("show");
+
+        const today = getLocalDateKey();
+        saveState({ lastPlay: today, prizeName: prize.name });
+
+        hasPlayedToday = true;
+      }, 250);
+    }
+
+    function createConfetti() {
+      const colors = ["#FFD700", "#FFA500", "#FF6347", "#00CED1", "#FF1493"];
+      for (let i = 0; i < 60; i++) {
+        const c = document.createElement("div");
+        c.className = "confetti";
+        c.style.left = Math.random() * 100 + "vw";
+        c.style.top = "-10px";
+        c.style.background = colors[Math.floor(Math.random() * colors.length)];
+        c.style.animationDelay = (Math.random() * 0.4) + "s";
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 3000);
+      }
+    }
+
+    closeModal.addEventListener("click", () => {
+      prizeModal.classList.remove("show");
+      duckBg(false);
+      showAlreadyPlayed(loadState()?.prizeName || "");
+    });
+
+    prizeModal.addEventListener("click", (e) => {
+      if (e.target === prizeModal) closeModal.click();
+    });
+
+    /***********
+     * Init     *
+     ***********/
+    setTimeout(() => {
+      loadingScreen.classList.add("hidden");
+      createSnowflakes();
+      checkIfPlayedToday();
+      // Música: SOLO arranca cuando el usuario toca la pantalla (unlockAudio)
+    }, 2000);
+  </script>
+</body>
+</html>
